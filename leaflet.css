@@ -1,0 +1,14 @@
+/* Leaflet base styles included for offline compatibility */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+.leaflet-tile {
+  filter: brightness(0.96);
+}
+.leaflet-control-attribution,
+.leaflet-control-zoom,
+.leaflet-control-scale {
+  display: none !important;
+}

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-mode">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AeroSky — Premium Weather SaaS Dashboard</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="AeroSky is a premium real-time weather intelligence dashboard. Search cities worldwide, view hourly and 7-day forecasts, track AQI, UV index, and visual weather trends." />
+    
+    <!-- Fonts: Outfit & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/style.css" />
+    
+    <!-- Libraries: Chart.js and Leaflet CSS/JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  </head>
+  <body>
+    <div class="app-shell" id="appShell">
+      
+      <!-- LEFT SIDEBAR -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo">
+            <span class="logo-icon">
+              <!-- Animated Weather Logo SVG -->
+              <svg viewBox="0 0 64 64" width="32" height="32" class="spinning-logo">
+                <circle cx="32" cy="32" r="12" fill="url(#logoSunGrad)"/>
+                <path d="M46,38a8,8,0,0,0-7.8-6.2A10,10,0,0,0,19.2,34,6,6,0,0,0,20,46H46a6,6,0,0,0,0-12Z" fill="#ffffff" opacity="0.9"/>
+                <defs>
+                  <linearGradient id="logoSunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#38bdf8" />
+                    <stop offset="100%" stop-color="#0284c7" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+            <span class="logo-text">AeroSky</span>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <span class="nav-section-title">Navigation</span>
+            <a href="#" class="nav-link active" id="navDashboard">
+              <span class="nav-link-icon">📊</span> Dashboard
+            </a>
+          </div>
+
+          <!-- FAVORITES SECTION -->
+          <div class="nav-section">
+            <div class="nav-section-header">
+              <span class="nav-section-title">Favorites</span>
+              <span class="favorites-count" id="favCount">0</span>
+            </div>
+            <div class="favorites-list" id="favoritesList">
+              <p class="empty-list-text">No saved locations</p>
+            </div>
+          </div>
+
+          <!-- RECENT SEARCHES -->
+          <div class="nav-section">
+            <span class="nav-section-title">Recents</span>
+            <div class="history-list" id="historyList">
+              <p class="empty-list-text">No recent searches</p>
+            </div>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <!-- UNITS & THEME CONTROLS -->
+          <div class="controls-row">
+            <div class="unit-toggle" id="unitToggleContainer">
+              <button class="unit-btn active" id="unitC">°C</button>
+              <button class="unit-btn" id="unitF">°F</button>
+            </div>
+            <button id="themeToggle" class="circle-btn" aria-label="Toggle theme">
+              🌙
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN CONTENT PANEL -->
+      <main class="main-panel">
+        
+        <!-- HEADER / TOPBAR -->
+        <header class="topbar">
+          <div class="breadcrumb">
+            <span class="breadcrumb-prefix">Location</span>
+            <span class="breadcrumb-separator">/</span>
+            <span class="breadcrumb-current" id="locationBreadcrumb">Loading...</span>
+          </div>
+
+          <div class="search-actions">
+            <form id="searchForm" class="search-form">
+              <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input
+                  id="cityInput"
+                  type="text"
+                  placeholder="Search city (e.g. Pune, Tokyo, London)"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn-primary">Search</button>
+            </form>
+            <button id="locateButton" class="btn btn-secondary" title="Use my current coordinates">
+              <span class="gps-icon">🎯</span> Locate
+            </button>
+          </div>
+        </header>
+
+        <!-- ALERTS AND NOTIFICATIONS -->
+        <div id="alertBox" class="alert-banner hidden"></div>
+
+        <!-- LOADER STATE -->
+        <section id="loadingState" class="loading-container hidden">
+          <div class="loader-spinner"></div>
+          <p class="loader-text">Analyzing atmospheric conditions...</p>
+        </section>
+
+        <!-- DASHBOARD CONTAINER -->
+        <div id="weatherContent" class="weather-dashboard-grid hidden">
+          
+          <!-- CURRENT WEATHER CARD (HERO) -->
+          <section class="card hero-card" id="heroCard">
+            <div class="hero-card-header">
+              <div>
+                <h1 id="cityName" class="city-name">City Name</h1>
+                <p id="locationDetails" class="location-coords">0.00, 0.00 • Timezone</p>
+              </div>
+              <button id="saveFavorite" class="btn-favorite" title="Add to favorites">
+                <svg viewBox="0 0 24 24" width="24" height="24" class="star-icon">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                </svg>
+              </button>
+            </div>
+            
+            <div class="hero-weather-main">
+              <!-- Animated custom weather SVG loaded dynamically -->
+              <div class="hero-weather-icon" id="currentWeatherIcon"></div>
+              
+              <div class="hero-temp-block">
+                <h2 id="currentTemp" class="temp-text">--°C</h2>
+                <p id="currentCondition" class="condition-text">Loading...</p>
+              </div>
+            </div>
+
+            <div class="hero-meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Apparent Temp</span>
+                <strong id="feelsLike" class="meta-value">--°</strong>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Sunrise</span>
+                <strong id="sunriseTime" class="meta-value">--:--</strong>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Sunset</span>
+                <strong id="sunsetTime" class="meta-value">--:--</strong>
+              </div>
+            </div>
+          </section>
+
+          <!-- ATMOSPHERIC METRICS CARD (AQI + STATS) -->
+          <section class="card metrics-card">
+            <h3 class="card-title">Atmospheric Index</h3>
+            
+            <div class="index-row">
+              <!-- Air Quality Ring Indicator -->
+              <div class="gauge-container">
+                <svg width="100" height="100" class="progress-ring">
+                  <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="transparent" r="38" cx="50" cy="50"/>
+                  <circle class="progress-ring-bar" id="aqiProgressRing" stroke="#38bdf8" stroke-width="8" stroke-dasharray="238.76" stroke-dashoffset="238.76" stroke-linecap="round" fill="transparent" r="38" cx="50" cy="50"/>
+                </svg>
+                <div class="gauge-center">
+                  <span id="aqiValue" class="gauge-value">--</span>
+                  <span class="gauge-unit">AQI</span>
+                </div>
+                <span class="gauge-label">Air Quality: <span id="aqiLabel" class="label-badge">--</span></span>
+              </div>
+
+              <!-- UV Index Gauge -->
+              <div class="gauge-container">
+                <svg width="100" height="100" class="progress-ring">
+                  <circle class="progress-ring-bg" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="transparent" r="38" cx="50" cy="50"/>
+                  <circle class="progress-ring-bar" id="uvProgressRing" stroke="#fbbf24" stroke-width="8" stroke-dasharray="238.76" stroke-dashoffset="238.76" stroke-linecap="round" fill="transparent" r="38" cx="50" cy="50"/>
+                </svg>
+                <div class="gauge-center">
+                  <span id="statUV" class="gauge-value">--</span>
+                  <span class="gauge-unit">UV</span>
+                </div>
+                <span class="gauge-label">UV Exposure</span>
+              </div>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-box">
+                <div class="stat-box-icon">💧</div>
+                <div>
+                  <span class="stat-box-label">Humidity</span>
+                  <strong id="statHumidity" class="stat-box-value">--%</strong>
+                </div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-box-icon">💨</div>
+                <div>
+                  <span class="stat-box-label">Wind Speed</span>
+                  <strong id="statWind" class="stat-box-value">-- km/h</strong>
+                </div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-box-icon">🎈</div>
+                <div>
+                  <span class="stat-box-label">Pressure</span>
+                  <strong id="statPressure" class="stat-box-value">-- hPa</strong>
+                </div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-box-icon">🌧️</div>
+                <div>
+                  <span class="stat-box-label">Precipitation</span>
+                  <strong id="statRain" class="stat-box-value">--%</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- TEMPERATURE CHART -->
+          <section class="card chart-card">
+            <h3 class="card-title">Temperature Trend (24h)</h3>
+            <div class="chart-wrapper">
+              <canvas id="tempChart"></canvas>
+            </div>
+          </section>
+
+          <!-- WEATHER MAP -->
+          <section class="card map-card">
+            <h3 class="card-title">Meteorological Map</h3>
+            <div id="weatherMap" class="map-wrapper"></div>
+          </section>
+
+          <!-- HOURLY SCROLL FORECAST -->
+          <section class="hourly-panel">
+            <h3 class="card-title">Hourly Forecast</h3>
+            <div class="hourly-scroll-container" id="hourlyList">
+              <!-- Rendered Dynamically -->
+            </div>
+          </section>
+
+          <!-- 7-DAY FORECAST -->
+          <section class="daily-panel">
+            <h3 class="card-title">7-Day Forecast</h3>
+            <div class="daily-grid-container" id="dailyList">
+              <!-- Rendered Dynamically -->
+            </div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+
+    <!-- Application Script -->
+    <script src="/static/script.js"></script>
+  </body>
+</html>
